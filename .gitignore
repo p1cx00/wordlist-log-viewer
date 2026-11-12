@@ -1,0 +1,23 @@
+# Build output
+build/
+bin/
+obj/
+*.pdb
+*.user
+*.suo
+*.cache
+
+# Visual Studio
+.vs/
+*.csproj.user
+
+# Test and local data
+testdata/
+*.tmp
+*.log
+
+# Operating system
+Thumbs.db
+Desktop.ini
+.DS_Store
+
