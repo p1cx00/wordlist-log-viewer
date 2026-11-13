@@ -92,6 +92,7 @@ namespace WordlistViewer
         private int activeMatchLineIndex;
         private int activeMatchCharIndex;
         private long activeMatchOffset;
+        private bool suppressChunkRequests;
         private Func<ViewerLine, bool> bookmarkPredicate;
 
         public event EventHandler<ChunkRequestEventArgs> ChunkRequested;
@@ -314,15 +315,41 @@ namespace WordlistViewer
             activeMatchOffset = -1;
             previousChunkRequested = false;
             nextChunkRequested = false;
-            RecalculateContentWidth();
-            UpdateScrollBars();
-            SetTopLine(topLineIndex);
+            suppressChunkRequests = true;
+            try
+            {
+                RecalculateContentWidth();
+                UpdateScrollBars();
+                SetTopLine(topLineIndex);
+            }
+            finally
+            {
+                suppressChunkRequests = false;
+            }
+            CheckChunkRequest();
             Invalidate();
         }
 
         public void SetLines(IList<ViewerLine> newLines)
         {
             SetLines(newLines, -1, 0);
+        }
+
+        public void ReplaceLinesPreservingState(IList<ViewerLine> newLines, long topByteOffset)
+        {
+            ViewerLine selectedLine = SelectedLine;
+            long selectedByteOffset = selectedLine == null ? -1 : selectedLine.ByteOffset;
+            long previousActiveMatchOffset = activeMatchOffset;
+            int previousActiveMatchCharIndex = activeMatchCharIndex;
+
+            SetLines(newLines);
+            RestoreTopByteOffset(topByteOffset);
+            if (selectedByteOffset >= 0)
+            {
+                SelectOffsetIfPresent(selectedByteOffset, false);
+            }
+            ActiveMatchOffset = previousActiveMatchOffset;
+            ActiveMatchCharIndex = previousActiveMatchCharIndex;
         }
 
         public void AppendLines(IList<ViewerLine> additionalLines)
@@ -385,6 +412,17 @@ namespace WordlistViewer
             if (index < 0) return;
             if (selectLine) SelectLine(index, true);
             else ScrollToLine(index);
+        }
+
+        public bool SelectOffsetIfPresent(long byteOffset, bool ensureVisible)
+        {
+            int index = FindLineIndexByOffset(byteOffset);
+            if (index < 0 || index >= lines.Count) return false;
+            ViewerLine line = lines[index];
+            long end = line.ByteOffset + Math.Max(1, line.ByteLength);
+            if (byteOffset < line.ByteOffset || byteOffset >= end) return false;
+            SelectLine(index, ensureVisible);
+            return true;
         }
 
         public long CaptureTopByteOffset()
@@ -814,6 +852,7 @@ namespace WordlistViewer
 
         private void CheckChunkRequest()
         {
+            if (suppressChunkRequests) return;
             if (lines.Count == 0) return;
             int top = TopLineIndex;
             int bottom = top + VisibleLineCount;

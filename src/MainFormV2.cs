@@ -198,7 +198,7 @@ namespace WordlistViewer
 
             Label title = new Label();
             title.AutoSize = true;
-            title.Text = "WORDLIST / LOG VIEWER  2.3.1";
+            title.Text = "WORDLIST / LOG VIEWER  2.3.2";
             title.Font = new Font("Segoe UI Semibold", 15.5f, FontStyle.Bold);
             title.ForeColor = PrimaryTextColor;
             title.Location = new Point(18, 8);
@@ -727,7 +727,14 @@ namespace WordlistViewer
                 }
             };
 
-            searchResultsList.DoubleClick += async delegate { await JumpToSelectedSearchResultAsync(); };
+            searchResultsList.MouseClick += async delegate(object sender, MouseEventArgs e)
+            {
+                if (e.Button != MouseButtons.Left) return;
+                int clickedIndex = searchResultsList.IndexFromPoint(e.Location);
+                if (clickedIndex < 0) return;
+                searchResultsList.SelectedIndex = clickedIndex;
+                await JumpToSelectedSearchResultAsync();
+            };
             searchResultsList.KeyDown += async delegate(object sender, KeyEventArgs e)
             {
                 if (e.KeyCode == Keys.Enter)
@@ -829,9 +836,9 @@ namespace WordlistViewer
             }
         }
 
-        private async Task LoadWindowAsync(long offset, bool alignToLine, long? selectOffset, bool recordHistory)
+        private async Task<bool> LoadWindowAsync(long offset, bool alignToLine, long? selectOffset, bool recordHistory)
         {
-            if (string.IsNullOrEmpty(currentPath) || currentEncoding == null) return;
+            if (string.IsNullOrEmpty(currentPath) || currentEncoding == null) return false;
             if (pageCancellation != null)
             {
                 pageCancellation.Cancel();
@@ -852,14 +859,14 @@ namespace WordlistViewer
                 {
                     return HugeFileReader.ReadPage(path, offset, alignToLine, encoding, token);
                 }, token);
-                if (token.IsCancellationRequested || generation != pageGeneration || !string.Equals(path, currentPath, StringComparison.OrdinalIgnoreCase)) return;
+                if (token.IsCancellationRequested || generation != pageGeneration || !string.Equals(path, currentPath, StringComparison.OrdinalIgnoreCase)) return false;
 
                 long firstLine = await ResolveFirstLineNumber(page, requestedMode, token);
                 List<ViewerLine> lines = await Task.Run(delegate
                 {
                     return ViewerLineBuilder.Build(page, encoding, requestedMode, firstLine);
                 }, token);
-                if (token.IsCancellationRequested || generation != pageGeneration) return;
+                if (token.IsCancellationRequested || generation != pageGeneration) return false;
 
                 ViewerChunk chunk = new ViewerChunk();
                 chunk.Page = page;
@@ -880,13 +887,16 @@ namespace WordlistViewer
                 UpdateHistoryButtons();
 
                 PrefetchInitialNeighbors();
+                return true;
             }
             catch (OperationCanceledException)
             {
+                return false;
             }
             catch (Exception exception)
             {
                 if (generation == pageGeneration) ShowOperationError(Localization.T("error.read_view"), exception);
+                return false;
             }
         }
 
@@ -987,8 +997,15 @@ namespace WordlistViewer
             {
                 for (int i = 0; i < combined.Count; i++) combined[i].LocalLineNumber = i + 1;
             }
-            lineViewer.SetLines(combined);
-            lineViewer.ScrollToOffset(anchorOffset, selectAnchor);
+            if (selectAnchor)
+            {
+                lineViewer.SetLines(combined);
+                lineViewer.ScrollToOffset(anchorOffset, true);
+            }
+            else
+            {
+                lineViewer.ReplaceLinesPreservingState(combined, anchorOffset);
+            }
             lineViewer.SearchText = searchBox.Text;
             lineViewer.ActiveMatchOffset = currentMatchOffset;
             UpdateLocalSearchResults();
@@ -1313,7 +1330,8 @@ namespace WordlistViewer
             {
                 currentMatchOffset = item.MatchOffset;
                 currentMatchQuery = searchBox.Text;
-                await LoadWindowAsync(item.MatchOffset, true, item.MatchOffset, true);
+                bool loaded = await LoadWindowAsync(item.MatchOffset, true, item.MatchOffset, true);
+                if (!loaded) return;
                 SelectActiveSearchResult(item.MatchOffset);
                 statusMessage.Text = Localization.Format("status.result", item.MatchNumber, item.MatchOffset);
                 return;

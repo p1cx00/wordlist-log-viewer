@@ -9,8 +9,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCompany("Wordlist Viewer")]
 [assembly: AssemblyProduct("Wordlist & Log Viewer")]
 [assembly: AssemblyCopyright("2026")]
-[assembly: AssemblyVersion("2.3.1.0")]
-[assembly: AssemblyFileVersion("2.3.1.0")]
+[assembly: AssemblyVersion("2.3.2.0")]
+[assembly: AssemblyFileVersion("2.3.2.0")]
 
 namespace WordlistViewer
 {

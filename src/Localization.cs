@@ -177,7 +177,7 @@ namespace WordlistViewer
         private static Dictionary<string, string> BuildEnglish()
         {
             Dictionary<string, string> d = new Dictionary<string, string>(StringComparer.Ordinal);
-            d["window.title"] = "Wordlist & Log Viewer 2.3.1";
+            d["window.title"] = "Wordlist & Log Viewer 2.3.2";
             d["header.badge"] = "  VIRTUAL LINES  •  READ ONLY  •  FIXED RAM  ";
             d["file.none"] = "No file is open";
             d["file.drop_hint"] = "Drop a file here or use the Open File button.";
@@ -308,7 +308,7 @@ namespace WordlistViewer
         private static Dictionary<string, string> BuildTurkish()
         {
             Dictionary<string, string> d = new Dictionary<string, string>(StringComparer.Ordinal);
-            d["window.title"] = "Wordlist & Log Viewer 2.3.1";
+            d["window.title"] = "Wordlist & Log Viewer 2.3.2";
             d["header.badge"] = "  SANAL SATIR  •  SALT OKUNUR  •  SABİT RAM  ";
             d["file.none"] = "Henüz dosya açılmadı";
             d["file.drop_hint"] = "Dosyayı sürükleyip bırakabilir veya Dosya Aç düğmesini kullanabilirsiniz.";

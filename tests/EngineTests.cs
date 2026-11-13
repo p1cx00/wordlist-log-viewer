@@ -20,6 +20,8 @@ namespace WordlistViewer
                 TestLocalization();
                 TestControlCharacterDisplay(root);
                 TestViewerLineModes(root);
+                TestViewerStatePreservation();
+                TestViewerChunkRequestAfterWindowReplacement();
                 TestPageBoundary(root);
                 TestLongLinePaging(root);
                 TestForwardAndBackwardSearch(root);
@@ -142,6 +144,87 @@ namespace WordlistViewer
             Assert(page.Text == "a\u2400b\u00B7c\n", "Control characters are display-safe");
             Assert(page.Text.IndexOf('\0') < 0, "NUL does not truncate the rich text control");
             Pass("control-character display");
+        }
+
+        private static void TestViewerStatePreservation()
+        {
+            List<ViewerLine> original = new List<ViewerLine>();
+            for (int i = 0; i < 80; i++)
+            {
+                original.Add(new ViewerLine
+                {
+                    ByteOffset = 1000 + i * 10,
+                    ByteLength = 10,
+                    Text = "line-" + i
+                });
+            }
+
+            using (VirtualLineViewer viewer = new VirtualLineViewer())
+            {
+                viewer.SetLines(original);
+                viewer.RestoreTopByteOffset(1200);
+                Assert(viewer.SelectOffsetIfPresent(1250, false), "Viewer selects an exact byte offset");
+                viewer.ActiveMatchOffset = 1253;
+                viewer.ActiveMatchCharIndex = 3;
+
+                List<ViewerLine> expanded = new List<ViewerLine>();
+                for (int i = 0; i < 10; i++)
+                {
+                    expanded.Add(new ViewerLine
+                    {
+                        ByteOffset = 900 + i * 10,
+                        ByteLength = 10,
+                        Text = "prefetched-" + i
+                    });
+                }
+                expanded.AddRange(original);
+
+                viewer.ReplaceLinesPreservingState(expanded, 1200);
+                Assert(viewer.TopByteOffset == 1200, "Background chunk rebuild preserves the top byte offset");
+                Assert(viewer.SelectedLine != null && viewer.SelectedLine.ByteOffset == 1250, "Background chunk rebuild preserves the selected result line");
+                Assert(viewer.ActiveMatchOffset == 1253 && viewer.ActiveMatchCharIndex == 3, "Background chunk rebuild preserves the active match highlight");
+            }
+            Pass("viewer state preservation");
+        }
+
+        private static void TestViewerChunkRequestAfterWindowReplacement()
+        {
+            using (VirtualLineViewer viewer = new VirtualLineViewer())
+            {
+                List<ViewerLine> oldWindow = CreateViewerLines(0, 200);
+                viewer.SetLines(oldWindow);
+                viewer.TopLineIndex = 190;
+
+                List<bool> directions = new List<bool>();
+                List<long> edges = new List<long>();
+                viewer.ChunkRequested += delegate(object sender, ChunkRequestEventArgs e)
+                {
+                    directions.Add(e.Forward);
+                    edges.Add(e.EdgeByteOffset);
+                };
+
+                List<ViewerLine> targetWindow = CreateViewerLines(2000000, 200);
+                viewer.SetLines(targetWindow);
+
+                Assert(directions.Count == 1 && !directions[0], "Replacing a window requests only the stable top-side neighbor");
+                Assert(edges[0] == targetWindow[0].ByteOffset, "Chunk request uses the new window's top edge instead of the stale scroll position");
+            }
+            Pass("viewer chunk request replacement");
+        }
+
+        private static List<ViewerLine> CreateViewerLines(long firstOffset, int count)
+        {
+            List<ViewerLine> result = new List<ViewerLine>();
+            for (int i = 0; i < count; i++)
+            {
+                result.Add(new ViewerLine
+                {
+                    ByteOffset = firstOffset + i * 10,
+                    ByteLength = 10,
+                    Text = "line-" + i
+                });
+            }
+            return result;
         }
 
         private static void TestLongLinePaging(string root)

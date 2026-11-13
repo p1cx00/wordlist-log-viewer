@@ -15,8 +15,8 @@ Use these values when creating the repository.
 
 ## Release
 
-- **Tag:** `v2.3.1`
-- **Title:** `Wordlist & Log Viewer 2.3.1`
+- **Tag:** `v2.3.2`
+- **Title:** `Wordlist & Log Viewer 2.3.2`
 - **Primary asset:** `WordlistViewer-Windows-x64.zip`
 - **Optional direct asset:** `WordlistViewer.exe`
 

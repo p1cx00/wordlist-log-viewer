@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.3.2 — 2026-11-12
+
+- Search results now navigate on a single left click; Enter remains supported.
+- Fixed a stale-scroll race that could move the viewer roughly one 256 KB block past the selected match.
+- Background neighbor loading now preserves the selected line, exact top offset, and active-match highlight.
+- Cancelled or superseded result navigation no longer updates the UI as if it succeeded.
+- Added regression coverage for viewer-state preservation and window-replacement chunk requests.
+
 ## 2.3.1 — 2026-11-12
 
 - Clarified the product identity as a huge text, wordlist, dictionary, and archived log viewer.
